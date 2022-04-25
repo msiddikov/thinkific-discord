@@ -18,7 +18,7 @@ import (
 func init() {
 	godotenv.Load(".env")
 	s := gocron.NewScheduler(time.UTC)
-	s.Every(1).Days().Do(discordBot.AdjustRoles)
+	s.Every(1).Days().At("00:00").Do(discordBot.AdjustRoles)
 }
 
 func main() {
