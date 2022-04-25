@@ -9,13 +9,16 @@ import (
 	"thinkific-discord/internal/email"
 	"thinkific-discord/internal/sheets"
 	"thinkific-discord/internal/webServer"
+	"time"
 
+	"github.com/go-co-op/gocron"
 	"github.com/joho/godotenv"
 )
 
 func init() {
 	godotenv.Load(".env")
-
+	s := gocron.NewScheduler(time.UTC)
+	s.Every(1).Days().Do(discordBot.AdjustRoles)
 }
 
 func main() {
@@ -24,7 +27,7 @@ func main() {
 	discordBot.SetGuildId()
 	sheets.InitService()
 	sheets.UpdateCourses()
-	sheets.UpdateRoles()
+	discordBot.UpdateRoles()
 
 	// Waiting for exit command from os
 	quit := make(chan os.Signal)

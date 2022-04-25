@@ -21,6 +21,11 @@ type (
 		Expire time.Time
 	}
 
+	RolesWithIds struct {
+		Id    int
+		Roles []CurrentRole
+	}
+
 	WebhookOrder struct {
 		Payload struct {
 			Course struct {

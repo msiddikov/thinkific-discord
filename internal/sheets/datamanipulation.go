@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"log"
 	"strconv"
-	"thinkific-discord/internal/discordBot"
 	"thinkific-discord/internal/thinkific"
 	"thinkific-discord/internal/types"
 
@@ -32,8 +31,7 @@ func UpdateCourses() {
 	}
 }
 
-func UpdateRoles() {
-	roles := discordBot.GetRoles()
+func UpdateRoles(roles types.RolesResp) {
 	var vr sheets.ValueRange
 	for _, v := range roles {
 		vr.Values = append(vr.Values, []interface{}{v.Name, v.Id})
@@ -214,4 +212,27 @@ func getCourseRole(courseId int) string {
 		}
 	}
 	return ""
+}
+
+func GetUsersRoles() []types.RolesWithIds {
+	res := []types.RolesWithIds{}
+	readRange := dataRange
+	resp, err := svc.Spreadsheets.Values.Get(spreadsheetId, readRange).Do()
+	if err != nil {
+		log.Fatalf("Unable to retrieve data from sheet: %v", err)
+	}
+	for _, row := range resp.Values {
+
+		if len(row) < 7 {
+			continue
+		}
+		roles := []types.CurrentRole{}
+		json.Unmarshal([]byte(row[6].(string)), &roles)
+		if len(roles) == 0 {
+			continue
+		}
+		userId, _ := strconv.Atoi(row[0].(string))
+		res = append(res, types.RolesWithIds{Id: userId, Roles: roles})
+	}
+	return res
 }

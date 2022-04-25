@@ -76,7 +76,8 @@ func newOrder(c *gin.Context) {
 		Email:     order.Payload.User.Email,
 	})
 
-	sheets.AddCourseToUser(order.Payload.User.Id, order.Payload.Course.Id, order.Payload.Expiry_date)
+	roles := sheets.AddCourseToUser(order.Payload.User.Id, order.Payload.Course.Id, order.Payload.Expiry_date)
+	discordBot.SetRoles(order.Payload.User.Id, roles)
 
 	link := discord.GenerateLink(fmt.Sprintf("%v", order.Payload.User.Id))
 	email.SendInviteLink(order.Payload.User.Email, link, order.Payload.User.First_name)

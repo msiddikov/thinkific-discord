@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"thinkific-discord/internal/email"
+	"thinkific-discord/internal/sheets"
 	"thinkific-discord/internal/types"
 	"time"
 )
@@ -91,7 +92,12 @@ func BanUser(userId string) {
 
 }
 
-func SetRoles(discordUserId string, roles []types.CurrentRole) []types.CurrentRole {
+func UpdateRoles() {
+	sheets.UpdateRoles(GetRoles())
+}
+
+func SetRoles(userId int, roles []types.CurrentRole) {
+	discordUserId := sheets.GetDiscordIdByUserId(userId)
 	rolesToSet := []string{}
 	i := 0
 	for i < len(roles) {
@@ -108,7 +114,14 @@ func SetRoles(discordUserId string, roles []types.CurrentRole) []types.CurrentRo
 	bodybytes, _ := json.Marshal(body)
 	req, _ := http.NewRequest(http.MethodPatch, host+"/guilds/"+GuildId+"/members/"+discordUserId, bytes.NewReader(bodybytes))
 	discordReq(req)
-	return roles
+	sheets.SetUserRoles(userId, roles)
+}
+
+func AdjustRoles() {
+	users := sheets.GetUsersRoles()
+	for _, v := range users {
+		SetRoles(v.Id, v.Roles)
+	}
 }
 
 func GetInviteLink() string {

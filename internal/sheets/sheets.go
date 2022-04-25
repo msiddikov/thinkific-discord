@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"thinkific-discord/internal/discordBot"
+
 	"thinkific-discord/internal/email"
 	"thinkific-discord/internal/types"
 	"time"
@@ -104,7 +104,7 @@ func InitService() {
 	svc = srv
 }
 
-func AddCourseToUser(userId, courseId int, expire time.Time) {
+func AddCourseToUser(userId, courseId int, expire time.Time) []types.CurrentRole {
 	roleId := getCourseRole(courseId)
 	if expire.Before(time.Now()) {
 		expire = time.Now().AddDate(10, 0, 0)
@@ -127,8 +127,6 @@ func AddCourseToUser(userId, courseId int, expire time.Time) {
 	}
 	SetUserRoles(userId, currentRoles)
 
-	discordUser := GetDiscordIdByUserId(userId)
-	if discordUser != "" {
-		SetUserRoles(userId, discordBot.SetRoles(discordUser, currentRoles))
-	}
+	return currentRoles
+
 }

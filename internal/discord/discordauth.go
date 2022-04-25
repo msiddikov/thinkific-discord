@@ -90,7 +90,7 @@ func AddToGroup(code string, thinkificId int) {
 			fmt.Println(err)
 		}
 
-		discordBot.SetRoles(user.Id, sheets.GetUserRoles(thinkificId))
+		discordBot.SetRoles(thinkificId, sheets.GetUserRoles(thinkificId))
 
 	}
 }
