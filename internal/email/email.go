@@ -47,7 +47,7 @@ func send(req *http.Request) {
 }
 
 func SendBotAddLink(to, link, firsName string) {
-	tmpl := template.Must(template.ParseFiles("./internal/email/template.html"))
+	tmpl := template.Must(template.ParseFiles("./internal/email/adminTemplate.html"))
 	buf := new(bytes.Buffer)
 	tmpl.Execute(buf, templateData{os.Getenv("SERVER_DOMAIN"), firsName, link})
 
@@ -63,7 +63,7 @@ func SendBotAddLink(to, link, firsName string) {
 }
 
 func SendSheetsConsent(to, link, firsName string) {
-	tmpl := template.Must(template.ParseFiles("./internal/email/template.html"))
+	tmpl := template.Must(template.ParseFiles("./internal/email/adminTemplate.html"))
 	buf := new(bytes.Buffer)
 	tmpl.Execute(buf, templateData{os.Getenv("SERVER_DOMAIN"), firsName, link})
 
@@ -86,7 +86,7 @@ func SendInviteLink(to, link, firsName string) {
 	v := url.Values{}
 	v.Set("from", os.Getenv("MAILGUN_FROM"))
 	v.Set("to", to)
-	v.Set("subject", "Your Discord invitation")
+	v.Set("subject", `📣Your "Mind Unbound Trading" Discord Invitation!`)
 	v.Set("html", buf.String())
 	//pass the values to the request's body
 	req, _ := http.NewRequest("POST", uri, strings.NewReader(v.Encode()))

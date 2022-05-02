@@ -76,12 +76,15 @@ func newOrder(c *gin.Context) {
 		Email:     order.Payload.User.Email,
 	})
 
-	roles := sheets.AddCourseToUser(order.Payload.User.Id, order.Payload.Course.Id, order.Payload.Expiry_date)
+	roles, err := sheets.AddCourseToUser(order.Payload.User.Id, order.Payload.Course.Id, order.Payload.Expiry_date)
+	if err != nil {
+		c.Writer.WriteHeader(200)
+		return
+	}
 	discordBot.SetRoles(order.Payload.User.Id, roles)
 
 	link := discord.GenerateLink(fmt.Sprintf("%v", order.Payload.User.Id))
 	email.SendInviteLink(order.Payload.User.Email, link, order.Payload.User.First_name)
-	c.Writer.WriteHeader(200)
 }
 
 func newCourse(c *gin.Context) {

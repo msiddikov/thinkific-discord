@@ -22,9 +22,10 @@ var (
 
 type (
 	userResp struct {
-		Id       string
-		Username string
-		Email    string
+		Id            string
+		Username      string
+		Email         string
+		Discriminator string
 	}
 	bodyStruct struct {
 		Access_token string `json:"access_token"`
@@ -41,7 +42,7 @@ func GenerateLink(userId string) string {
 			AuthURL:  "https://discord.com/api/oauth2/authorize",
 			TokenURL: "https://discord.com/api/oauth2/token",
 		},
-		RedirectURL: "http://tools.lavina.uz:8085/discord/auth",
+		RedirectURL: os.Getenv("SERVER_DOMAIN") + "/discord/auth",
 	}
 
 	// Redirect user to consent page to ask for permission
@@ -73,7 +74,7 @@ func AddToGroup(code string, thinkificId int) {
 		user := userResp{}
 		json.Unmarshal(bodyBytes, &user)
 
-		sheets.SetDiscordIdByUserId(thinkificId, user.Id, user.Username)
+		sheets.SetDiscordIdByUserId(thinkificId, user.Id, user.Username+"#"+user.Discriminator)
 
 		clientBot := &http.Client{}
 		bodyObj := bodyStruct{tok.AccessToken}

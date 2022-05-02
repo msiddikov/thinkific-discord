@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	enumCourses      = "enums!B5:C"
+	enumCourses      = "enums!B6:C"
 	enumRoles        = "enums!F5:G"
 	settingsBindings = "settings!E4:G"
 	dataRange        = "data!B4:H"
@@ -24,6 +24,11 @@ func UpdateCourses() {
 	for _, v := range courses.Items {
 		vr.Values = append(vr.Values, []interface{}{v.Name, v.Id})
 	}
+	// adding some whitespace for deleted courses
+	for i := 0; i < 3; i++ {
+		vr.Values = append(vr.Values, []interface{}{"", ""})
+	}
+
 	writeRange := enumCourses
 	_, err := svc.Spreadsheets.Values.Update(spreadsheetId, writeRange, &vr).ValueInputOption("RAW").Do()
 	if err != nil {
@@ -36,6 +41,11 @@ func UpdateRoles(roles types.RolesResp) {
 	for _, v := range roles {
 		vr.Values = append(vr.Values, []interface{}{v.Name, v.Id})
 	}
+	// adding some whitespace for deleted roles
+	for i := 0; i < 3; i++ {
+		vr.Values = append(vr.Values, []interface{}{"", ""})
+	}
+
 	writeRange := enumRoles
 	_, err := svc.Spreadsheets.Values.Update(spreadsheetId, writeRange, &vr).ValueInputOption("RAW").Do()
 	if err != nil {
@@ -102,7 +112,7 @@ func GetDiscordIdByUserId(id int) string {
 
 		if row[0].(string) == strconv.Itoa(id) {
 			for len(row) < 5 {
-				row = append(row, "")
+				return ""
 			}
 			return row[4].(string)
 		}
@@ -194,7 +204,7 @@ func SetUserRoles(userId int, currentRoles []types.CurrentRole) {
 
 }
 
-func getCourseRole(courseId int) string {
+func GetCourseRole(courseId int) string {
 	roleId := ""
 	readRange := settingsBindings
 	resp, err := svc.Spreadsheets.Values.Get(spreadsheetId, readRange).Do()

@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"thinkific-discord/internal/discord"
 	"thinkific-discord/internal/discordBot"
 	"thinkific-discord/internal/email"
 	"thinkific-discord/internal/sheets"
@@ -16,18 +17,28 @@ import (
 )
 
 func init() {
-	godotenv.Load(".env")
-	s := gocron.NewScheduler(time.UTC)
-	s.Every(1).Days().At("00:00").Do(discordBot.AdjustRoles)
-}
 
-func main() {
+	godotenv.Load(".env")
 	go webServer.Listen()
 	email.InitServer()
 	discordBot.SetGuildId()
 	sheets.InitService()
-	sheets.UpdateCourses()
-	discordBot.UpdateRoles()
+
+	s := gocron.NewScheduler(time.UTC)
+	interval := os.Getenv("SERVER_UPDATE_INTERVAL")
+	if interval == "" {
+		interval = "24h"
+	}
+	s.Every(interval).Do(discordBot.UpdateRoles)
+	s.Every(interval).Do(sheets.UpdateCourses)
+	s.Every("24h").Do(discordBot.AdjustRoles)
+	s.StartAsync()
+	discord.GenerateLink("")
+}
+
+func main() {
+	// sheets.UpdateCourses()
+	// discordBot.UpdateRoles()
 
 	// Waiting for exit command from os
 	quit := make(chan os.Signal)

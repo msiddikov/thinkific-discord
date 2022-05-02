@@ -98,6 +98,9 @@ func UpdateRoles() {
 
 func SetRoles(userId int, roles []types.CurrentRole) {
 	discordUserId := sheets.GetDiscordIdByUserId(userId)
+	if discordUserId == "" {
+		return
+	}
 	rolesToSet := []string{}
 	i := 0
 	for i < len(roles) {
@@ -110,6 +113,10 @@ func SetRoles(userId int, roles []types.CurrentRole) {
 		rolesToSet = append(rolesToSet, roles[i].RoleId)
 		i++
 	}
+	if len(rolesToSet) == 0 {
+		rolesToSet = append(rolesToSet, sheets.GetCourseRole(0))
+	}
+
 	body := setRolesBody{rolesToSet}
 	bodybytes, _ := json.Marshal(body)
 	req, _ := http.NewRequest(http.MethodPatch, host+"/guilds/"+GuildId+"/members/"+discordUserId, bytes.NewReader(bodybytes))
@@ -126,18 +133,19 @@ func AdjustRoles() {
 
 func GetInviteLink() string {
 
-	body := struct {
-		MaxAge int `json:"max_age"`
-	}{
-		MaxAge: 60,
-	}
-	bodybytes, _ := json.Marshal(body)
-	req, _ := http.NewRequest(http.MethodPost, host+"/channels/"+os.Getenv("DISCORD_INVITE_CHAN_ID")+"/invites", bytes.NewReader(bodybytes))
-	responseBody := discordReq(req)
-	fmt.Println(responseBody)
+	// body := struct {
+	// 	MaxAge int `json:"max_age"`
+	// }{
+	// 	MaxAge: 60,
+	// }
+	// bodybytes, _ := json.Marshal(body)
+	// req, _ := http.NewRequest(http.MethodPost, host+"/channels/"+os.Getenv("DISCORD_INVITE_CHAN_ID")+"/invites", bytes.NewReader(bodybytes))
 
-	invite := inviteResp{}
-	json.Unmarshal(responseBody, &invite)
+	// responseBody := discordReq(req)
 
-	return invite.Code
+	// invite := inviteResp{}
+	// json.Unmarshal(responseBody, &invite)
+
+	// return invite.Code
+	return os.Getenv("DISCORD_INVITE_LINK")
 }

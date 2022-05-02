@@ -104,8 +104,11 @@ func InitService() {
 	svc = srv
 }
 
-func AddCourseToUser(userId, courseId int, expire time.Time) []types.CurrentRole {
-	roleId := getCourseRole(courseId)
+func AddCourseToUser(userId, courseId int, expire time.Time) ([]types.CurrentRole, error) {
+	roleId := GetCourseRole(courseId)
+	if roleId == "" {
+		return nil, fmt.Errorf("This course is not set")
+	}
 	if expire.Before(time.Now()) {
 		expire = time.Now().AddDate(10, 0, 0)
 	}
@@ -127,6 +130,6 @@ func AddCourseToUser(userId, courseId int, expire time.Time) []types.CurrentRole
 	}
 	SetUserRoles(userId, currentRoles)
 
-	return currentRoles
+	return currentRoles, nil
 
 }
