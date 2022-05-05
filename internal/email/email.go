@@ -35,18 +35,19 @@ func InitServer() {
 	uri = "https://api.mailgun.net/v3/" + os.Getenv("MAILGUN_DOMAIN") + "/messages"
 }
 
-func send(req *http.Request) {
+func send(req *http.Request) error {
 	client := &http.Client{}
 	req.SetBasicAuth("api", os.Getenv("MAILGUN_API"))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	res, err := client.Do(req)
 	bodybytes, _ := ioutil.ReadAll(res.Body)
-	if err != nil {
-		fmt.Printf("Error sending email: %s %s", err, bodybytes)
+	if err != nil || res.StatusCode > 299 {
+		return fmt.Errorf("Error sending email: %s %s", err, bodybytes)
 	}
+	return nil
 }
 
-func SendBotAddLink(to, link, firsName string) {
+func SendBotAddLink(to, link, firsName string) error {
 	tmpl := template.Must(template.ParseFiles("./internal/email/adminTemplate.html"))
 	buf := new(bytes.Buffer)
 	tmpl.Execute(buf, templateData{os.Getenv("SERVER_DOMAIN"), firsName, link})
@@ -58,11 +59,11 @@ func SendBotAddLink(to, link, firsName string) {
 	v.Set("html", buf.String())
 
 	req, _ := http.NewRequest("POST", uri, strings.NewReader(v.Encode()))
-	send(req)
+	return send(req)
 
 }
 
-func SendSheetsConsent(to, link, firsName string) {
+func SendSheetsConsent(to, link, firsName string) error {
 	tmpl := template.Must(template.ParseFiles("./internal/email/adminTemplate.html"))
 	buf := new(bytes.Buffer)
 	tmpl.Execute(buf, templateData{os.Getenv("SERVER_DOMAIN"), firsName, link})
@@ -74,11 +75,11 @@ func SendSheetsConsent(to, link, firsName string) {
 	v.Set("html", buf.String())
 
 	req, _ := http.NewRequest("POST", uri, strings.NewReader(v.Encode()))
-	send(req)
+	return send(req)
 
 }
 
-func SendInviteLink(to, link, firsName string) {
+func SendInviteLink(to, link, firsName string) error {
 	tmpl := template.Must(template.ParseFiles("./internal/email/template.html"))
 	buf := new(bytes.Buffer)
 	tmpl.Execute(buf, templateData{os.Getenv("SERVER_DOMAIN"), firsName, link})
@@ -90,6 +91,6 @@ func SendInviteLink(to, link, firsName string) {
 	v.Set("html", buf.String())
 	//pass the values to the request's body
 	req, _ := http.NewRequest("POST", uri, strings.NewReader(v.Encode()))
-	send(req)
+	return send(req)
 
 }

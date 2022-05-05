@@ -11,10 +11,13 @@ import (
 )
 
 const (
-	enumCourses      = "enums!B6:C"
-	enumRoles        = "enums!F5:G"
-	settingsBindings = "settings!E4:G"
-	dataRange        = "data!B4:H"
+	enumCourses       = "enums!B6:C"
+	enumRoles         = "enums!F5:G"
+	settingsBindings  = "settings!E4:G"
+	dataRange         = "data!B4:H"
+	dataRangeStart    = "data!B"
+	dataRangeEnd      = "H"
+	datarangeStartRow = 4
 )
 
 func UpdateCourses() {
@@ -32,7 +35,7 @@ func UpdateCourses() {
 	writeRange := enumCourses
 	_, err := svc.Spreadsheets.Values.Update(spreadsheetId, writeRange, &vr).ValueInputOption("RAW").Do()
 	if err != nil {
-		log.Fatalf("Unable to retrieve data from sheet. %v", err)
+		log.Panicf("Unable to retrieve data from sheet. %v", err)
 	}
 }
 
@@ -49,7 +52,7 @@ func UpdateRoles(roles types.RolesResp) {
 	writeRange := enumRoles
 	_, err := svc.Spreadsheets.Values.Update(spreadsheetId, writeRange, &vr).ValueInputOption("RAW").Do()
 	if err != nil {
-		log.Fatalf("Unable to retrieve data from sheet. %v", err)
+		log.Panicf("Unable to retrieve data from sheet. %v", err)
 	}
 }
 
@@ -57,7 +60,7 @@ func AddUser(user types.User) {
 	readRange := dataRange
 	resp, err := svc.Spreadsheets.Values.Get(spreadsheetId, readRange).Do()
 	if err != nil {
-		log.Fatalf("Unable to retrieve data from sheet: %v", err)
+		log.Panicf("Unable to retrieve data from sheet: %v", err)
 	}
 
 	var vr sheets.ValueRange
@@ -94,10 +97,9 @@ func AddUser(user types.User) {
 		})
 	}
 	writeRange := dataRange
-
 	_, err = svc.Spreadsheets.Values.Update(spreadsheetId, writeRange, &vr).ValueInputOption("RAW").Do()
 	if err != nil {
-		log.Fatalf("Unable to retrieve data from sheet. %v", err)
+		log.Panicf("Unable to retrieve data from sheet. %v", err)
 	}
 }
 
@@ -105,7 +107,7 @@ func GetDiscordIdByUserId(id int) string {
 	readRange := dataRange
 	resp, err := svc.Spreadsheets.Values.Get(spreadsheetId, readRange).Do()
 	if err != nil {
-		log.Fatalf("Unable to retrieve data from sheet: %v", err)
+		log.Panicf("Unable to retrieve data from sheet: %v", err)
 	}
 
 	for _, row := range resp.Values {
@@ -121,11 +123,11 @@ func GetDiscordIdByUserId(id int) string {
 
 }
 
-func SetDiscordIdByUserId(id int, discorsId, discordUN string) {
+func SetDiscordIdByUserId(id int, discorsId, discordUN string) error {
 	readRange := dataRange
 	resp, err := svc.Spreadsheets.Values.Get(spreadsheetId, readRange).Do()
 	if err != nil {
-		log.Fatalf("Unable to retrieve data from sheet: %v", err)
+		return err
 	}
 	var vr sheets.ValueRange
 
@@ -145,9 +147,9 @@ func SetDiscordIdByUserId(id int, discorsId, discordUN string) {
 
 	_, err = svc.Spreadsheets.Values.Update(spreadsheetId, writeRange, &vr).ValueInputOption("RAW").Do()
 	if err != nil {
-		log.Fatalf("Unable to retrieve data from sheet. %v", err)
+		return err
 	}
-
+	return nil
 }
 
 func GetUserRoles(userId int) []types.CurrentRole {
@@ -155,7 +157,7 @@ func GetUserRoles(userId int) []types.CurrentRole {
 	readRange := dataRange
 	resp, err := svc.Spreadsheets.Values.Get(spreadsheetId, readRange).Do()
 	if err != nil {
-		log.Fatalf("Unable to retrieve data from sheet: %v", err)
+		log.Panicf("Unable to retrieve data from sheet: %v", err)
 	}
 
 	for _, row := range resp.Values {
@@ -174,11 +176,11 @@ func GetUserRoles(userId int) []types.CurrentRole {
 
 }
 
-func SetUserRoles(userId int, currentRoles []types.CurrentRole) {
+func SetUserRoles(userId int, currentRoles []types.CurrentRole) error {
 	readRange := dataRange
 	resp, err := svc.Spreadsheets.Values.Get(spreadsheetId, readRange).Do()
 	if err != nil {
-		log.Fatalf("Unable to retrieve data from sheet: %v", err)
+		return err
 	}
 	var vr sheets.ValueRange
 
@@ -199,29 +201,29 @@ func SetUserRoles(userId int, currentRoles []types.CurrentRole) {
 
 	_, err = svc.Spreadsheets.Values.Update(spreadsheetId, writeRange, &vr).ValueInputOption("RAW").Do()
 	if err != nil {
-		log.Fatalf("Unable to retrieve data from sheet. %v", err)
+		return err
 	}
-
+	return nil
 }
 
-func GetCourseRole(courseId int) string {
+func GetCourseRole(courseId int) (string, error) {
 	roleId := ""
 	readRange := settingsBindings
 	resp, err := svc.Spreadsheets.Values.Get(spreadsheetId, readRange).Do()
 	if err != nil {
-		log.Fatalf("Unable to retrieve data from sheet: %v", err)
+		return "", err
 	}
 	for _, row := range resp.Values {
 
 		if row[0].(string) == strconv.Itoa(courseId) {
 			if len(row) < 2 {
-				return ""
+				return "", nil
 			}
 			roleId = row[1].(string)
-			return roleId
+			return roleId, nil
 		}
 	}
-	return ""
+	return "", nil
 }
 
 func GetUsersRoles() []types.RolesWithIds {
@@ -229,7 +231,7 @@ func GetUsersRoles() []types.RolesWithIds {
 	readRange := dataRange
 	resp, err := svc.Spreadsheets.Values.Get(spreadsheetId, readRange).Do()
 	if err != nil {
-		log.Fatalf("Unable to retrieve data from sheet: %v", err)
+		log.Panicf("Unable to retrieve data from sheet: %v", err)
 	}
 	for _, row := range resp.Values {
 
@@ -245,4 +247,36 @@ func GetUsersRoles() []types.RolesWithIds {
 		res = append(res, types.RolesWithIds{Id: userId, Roles: roles})
 	}
 	return res
+}
+
+func GetUserRow(userId int) ([]interface{}, string) {
+	res := []interface{}{}
+	readRange := dataRange
+	resp, err := svc.Spreadsheets.Values.Get(spreadsheetId, readRange).Do()
+	if err != nil {
+		log.Panicf("Unable to retrieve data from sheet: %v", err)
+	}
+	resRow := len(resp.Values)
+	for k, row := range resp.Values {
+		if row[0].(string) == strconv.Itoa(userId) {
+			res = row
+			resRow = datarangeStartRow + k
+		}
+	}
+
+	for len(res) < 7 {
+		res = append(res, "")
+	}
+	resRange := dataRangeStart + strconv.Itoa(resRow) + ":" + dataRangeEnd + strconv.Itoa(resRow)
+	return res, resRange
+}
+
+func SetUserRow(row []interface{}, writeRange string) error {
+	var vr sheets.ValueRange
+	vr.Values = append(vr.Values, row)
+	_, err := svc.Spreadsheets.Values.Update(spreadsheetId, writeRange, &vr).ValueInputOption("RAW").Do()
+	if err != nil {
+		log.Panicf("Unable to write data to sheets: %v", err)
+	}
+	return nil
 }

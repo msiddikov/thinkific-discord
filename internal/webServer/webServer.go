@@ -1,6 +1,7 @@
 package webServer
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -9,7 +10,9 @@ import (
 	"thinkific-discord/internal/discordBot"
 	"thinkific-discord/internal/email"
 	"thinkific-discord/internal/sheets"
+	"thinkific-discord/internal/tgbot"
 	"thinkific-discord/internal/types"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,6 +20,7 @@ import (
 func Listen() {
 
 	router := gin.Default()
+	router.Use(ErrorHandler)
 
 	router.GET("/", Default)
 	router.GET("/discord/auth", discordAuth)
@@ -67,6 +71,14 @@ func sheetsAuth(c *gin.Context) {
 }
 
 func newOrder(c *gin.Context) {
+
+	defer func() {
+		err := recover()
+		if err != nil {
+			tgbot.SendString(fmt.Sprint(err))
+		}
+	}()
+	t1 := time.Now()
 	order := types.WebhookOrder{}
 	c.ShouldBindJSON(&order)
 	sheets.AddUser(types.User{
@@ -77,17 +89,40 @@ func newOrder(c *gin.Context) {
 	})
 
 	roles, err := sheets.AddCourseToUser(order.Payload.User.Id, order.Payload.Course.Id, order.Payload.Expiry_date)
-	if err != nil {
+	if roles == nil && err == nil {
 		c.Writer.WriteHeader(200)
 		return
 	}
-	discordBot.SetRoles(order.Payload.User.Id, roles)
+	fmt.Println(time.Now().Sub(t1))
+	if err != nil {
+		c.Writer.WriteHeader(500)
+		c.Writer.WriteString(err.Error())
+		panic(err)
+	}
+	go discordBot.SetRoles(order.Payload.User.Id, roles)
 
 	link := discord.GenerateLink(fmt.Sprintf("%v", order.Payload.User.Id))
-	email.SendInviteLink(order.Payload.User.Email, link, order.Payload.User.First_name)
+	err = email.SendInviteLink(order.Payload.User.Email, link, order.Payload.User.First_name)
+	if err != nil {
+		c.Writer.WriteHeader(500)
+		c.Writer.WriteString(err.Error())
+		panic(err)
+	}
+	c.Writer.WriteHeader(200)
+	fmt.Println(time.Now().Sub(t1))
 }
 
 func newCourse(c *gin.Context) {
 	sheets.UpdateCourses()
 	c.Writer.WriteHeader(200)
+}
+
+func ErrorHandler(c *gin.Context) {
+	//c.Next()
+
+	if len(c.Errors) == 0 {
+		return
+	}
+	msg, _ := json.Marshal(c.Errors)
+	c.JSON(http.StatusInternalServerError, msg)
 }

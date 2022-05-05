@@ -50,7 +50,7 @@ func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
 
 	tok, err := config.Exchange(context.TODO(), authCode)
 	if err != nil {
-		log.Fatalf("Unable to retrieve token from web: %v", err)
+		log.Panicf("Unable to retrieve token from web: %v", err)
 	}
 	return tok
 }
@@ -72,7 +72,7 @@ func saveToken(path string, token *oauth2.Token) {
 	fmt.Printf("Saving credential file to: %s\n", path)
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		log.Fatalf("Unable to cache oauth token: %v", err)
+		log.Panicf("Unable to cache oauth token: %v", err)
 	}
 	defer f.Close()
 	json.NewEncoder(f).Encode(token)
@@ -99,21 +99,29 @@ func InitService() {
 
 	srv, err := sheets.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
-		log.Fatalf("Unable to retrieve Sheets client: %v", err)
+		log.Panicf("Unable to retrieve Sheets client: %v", err)
 	}
 	svc = srv
+	UpdateCourses()
 }
 
 func AddCourseToUser(userId, courseId int, expire time.Time) ([]types.CurrentRole, error) {
-	roleId := GetCourseRole(courseId)
+	roleId, err := GetCourseRole(courseId)
+	if err != nil {
+		return nil, err
+	}
 	if roleId == "" {
-		return nil, fmt.Errorf("This course is not set")
+		return nil, nil
 	}
 	if expire.Before(time.Now()) {
 		expire = time.Now().AddDate(10, 0, 0)
 	}
+	userRow, userRange := GetUserRow(userId)
 
-	currentRoles := GetUserRoles(userId)
+	currentRoles := []types.CurrentRole{}
+	if userRow[6].(string) != "" {
+		json.Unmarshal([]byte(userRow[6].(string)), &currentRoles)
+	}
 
 	found := false
 	for k, v := range currentRoles {
@@ -128,8 +136,13 @@ func AddCourseToUser(userId, courseId int, expire time.Time) ([]types.CurrentRol
 			Expire: expire,
 		})
 	}
-	SetUserRoles(userId, currentRoles)
+	bytes, _ := json.Marshal(currentRoles)
+	userRow[6] = string(bytes)
 
+	err = SetUserRow(userRow, userRange)
+	if err != nil {
+		return nil, err
+	}
 	return currentRoles, nil
 
 }
