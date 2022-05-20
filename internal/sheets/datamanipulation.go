@@ -2,8 +2,10 @@ package sheets
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"strconv"
+	"thinkific-discord/internal/tgbot"
 	"thinkific-discord/internal/thinkific"
 	"thinkific-discord/internal/types"
 
@@ -21,6 +23,13 @@ const (
 )
 
 func UpdateCourses() {
+	defer func() {
+		err := recover()
+		if err != nil {
+			tgbot.SendString(fmt.Sprint(err))
+		}
+		return
+	}()
 	courses := thinkific.GetCourses()
 	var vr sheets.ValueRange
 

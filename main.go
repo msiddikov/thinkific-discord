@@ -19,10 +19,9 @@ import (
 )
 
 func init() {
-
 	godotenv.Load(".env")
 	go webServer.Listen()
-
+	go webServer.Listen80()
 }
 
 func main() {
@@ -31,8 +30,8 @@ func main() {
 		wg.Add(1)
 		go runApp(&wg)
 		wg.Wait()
-		fmt.Println("Recovering in 10 sec...")
-		time.Sleep(10 * time.Second)
+		fmt.Println("Recovering in 40 sec...")
+		time.Sleep(40 * time.Second)
 		// fmt.Println("Recoverered...")
 	}
 }

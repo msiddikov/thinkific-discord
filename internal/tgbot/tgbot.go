@@ -25,7 +25,7 @@ func Start() {
 	}
 	fmt.Println(fmt.Sprintf("Authorized on account %s", bot.Self.UserName))
 	bot.Debug = false
-	go updates(bot)
+	//go updates(bot)
 }
 
 func SendString(s string) {
@@ -38,6 +38,13 @@ func SendString(s string) {
 }
 
 func updates(bot *tgbotapi.BotAPI) {
+	defer func() {
+		err := recover()
+		if err != nil {
+			SendString(fmt.Sprint(err))
+		}
+		return
+	}()
 	fmt.Println("Getting tg updates...")
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60

@@ -47,6 +47,7 @@ func discordReq(req *http.Request) ([]byte, error) {
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println("Error when sending request to the server")
+		return nil, err
 	}
 
 	responseBody, err := ioutil.ReadAll(resp.Body)
@@ -96,6 +97,13 @@ func BanUser(userId string) {
 }
 
 func UpdateRoles() error {
+	defer func() {
+		err := recover()
+		if err != nil {
+			tgbot.SendString(fmt.Sprint(err))
+		}
+		return
+	}()
 	roles, err := GetRoles()
 	if err != nil {
 		return err
@@ -112,21 +120,22 @@ func SetRoles(userId int, roles []types.CurrentRole) error {
 		}
 	}()
 	discordUserId := sheets.GetDiscordIdByUserId(userId)
-	if discordUserId == "" {
-		return nil
-	}
+
 	rolesToSet := []string{}
 	i := 0
+	set := false
 	for i < len(roles) {
 		if roles[i].Expire.Before(time.Now()) || roles[i].RoleId == "" {
 			roles[i] = roles[len(roles)-1]
 			roles = roles[:len(roles)-1]
+			set = true
 			continue
 		}
 
 		rolesToSet = append(rolesToSet, roles[i].RoleId)
 		i++
 	}
+
 	if len(rolesToSet) == 0 {
 		role, err := sheets.GetCourseRole(0)
 		if err != nil {
@@ -135,25 +144,42 @@ func SetRoles(userId int, roles []types.CurrentRole) error {
 		rolesToSet = append(rolesToSet, role)
 	}
 
-	body := setRolesBody{rolesToSet}
-	bodybytes, _ := json.Marshal(body)
-	req, _ := http.NewRequest(http.MethodPatch, host+"/guilds/"+GuildId+"/members/"+discordUserId, bytes.NewReader(bodybytes))
-	bodyBytes, err := discordReq(req)
-	if err != nil {
-		return fmt.Errorf("Discord error: %s: %s", err, string(bodyBytes))
+	if discordUserId != "" {
+		body := setRolesBody{rolesToSet}
+		bodybytes, _ := json.Marshal(body)
+		req, _ := http.NewRequest(http.MethodPatch, host+"/guilds/"+GuildId+"/members/"+discordUserId, bytes.NewReader(bodybytes))
+		bodyBytes, err := discordReq(req)
+		if err != nil {
+			return fmt.Errorf("Discord error: %s: %s", err, string(bodyBytes))
+		}
 	}
-	err = sheets.SetUserRoles(userId, roles)
-	if err != nil {
-		return err
+
+	if set {
+		err := sheets.SetUserRoles(userId, roles)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
 func AdjustRoles() {
+	defer func() {
+		err := recover()
+		if err != nil {
+			tgbot.SendString(fmt.Sprint(err))
+		}
+		return
+	}()
 	users := sheets.GetUsersRoles()
+	i := 0
 	for _, v := range users {
 		SetRoles(v.Id, v.Roles)
+		i++
+		if i%20 == 0 {
+			time.Sleep(60 * time.Second)
+		}
 	}
 }
 

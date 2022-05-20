@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"thinkific-discord/internal/discord"
 	"thinkific-discord/internal/discordBot"
 	"thinkific-discord/internal/email"
@@ -24,6 +25,7 @@ func Listen() {
 
 	router.GET("/", Default)
 	router.GET("/discord/auth", discordAuth)
+	router.GET("/discord/sendinvite", sendInviteLink)
 	router.GET("/sheets/auth", sheetsAuth)
 	router.POST("/thinkific/order", newOrder)
 	router.POST("/thinkific/course", newCourse)
@@ -31,6 +33,39 @@ func Listen() {
 
 	srv := &http.Server{
 		Addr:    os.Getenv("SERVER_ADDRESS"),
+		Handler: router,
+	}
+
+	fmt.Println(fmt.Sprintf("Server is listening to %s", srv.Addr))
+
+	cert := os.Getenv("SERVER_CERT")
+	key := os.Getenv("SERVER_KEY")
+
+	var err error
+	if cert == "" && key == "" {
+		err = srv.ListenAndServe()
+	} else {
+		err = srv.ListenAndServeTLS(cert, key)
+	}
+	// service connections
+	if err != nil && err != http.ErrServerClosed {
+		fmt.Println(fmt.Sprintf("listen: %s\n", err))
+	} else {
+		fmt.Println(fmt.Sprintf("Server is listening to %s", srv.Addr))
+	}
+
+}
+
+func Listen80() {
+
+	router := gin.Default()
+
+	address := strings.Split(os.Getenv("SERVER_ADDRESS"), ":")[0] + ":80"
+
+	router.Static("/", "./internal/email/resources")
+
+	srv := &http.Server{
+		Addr:    address,
 		Handler: router,
 	}
 
@@ -49,6 +84,22 @@ func Listen() {
 
 func Default(c *gin.Context) {
 	c.Writer.WriteHeader(204)
+}
+
+func sendInviteLink(c *gin.Context) {
+
+	thinkificId := c.Request.URL.Query()["id"][0]
+	emailAddress := c.Request.URL.Query()["mail"][0]
+	name := c.Request.URL.Query()["name"][0]
+
+	link := discord.GenerateLink(thinkificId)
+	err := email.SendInviteLink(emailAddress, link, name)
+	if err != nil {
+		c.Writer.WriteHeader(500)
+		c.Writer.WriteString(err.Error())
+		return
+	}
+	c.Writer.WriteHeader(200)
 }
 
 func discordAuth(c *gin.Context) {
