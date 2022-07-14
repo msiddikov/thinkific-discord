@@ -10,6 +10,7 @@ import (
 	"thinkific-discord/internal/email"
 	"thinkific-discord/internal/sheets"
 	"thinkific-discord/internal/tgbot"
+	"thinkific-discord/internal/thinkific"
 	"thinkific-discord/internal/types"
 	"time"
 )
@@ -125,11 +126,31 @@ func SetRoles(userId int, roles []types.CurrentRole) error {
 	i := 0
 	set := false
 	for i < len(roles) {
-		if roles[i].Expire.Before(time.Now()) || roles[i].RoleId == "" {
+
+		if roles[i].RoleId == "" {
 			roles[i] = roles[len(roles)-1]
 			roles = roles[:len(roles)-1]
-			set = true
 			continue
+		}
+
+		if roles[i].Expire.Before(time.Now()) {
+			set = true
+			courses, _ := sheets.GetRoleCourses(roles[i].RoleId)
+			lastExpire := time.Now().Add(-1 * time.Hour)
+			for _, courseId := range courses {
+				expire, _ := thinkific.GetExpiryDate(userId, courseId)
+				if lastExpire.Before(expire) {
+					lastExpire = expire
+				}
+			}
+
+			if time.Now().Before(lastExpire) {
+				roles[i].Expire = lastExpire
+			} else {
+				roles[i] = roles[len(roles)-1]
+				roles = roles[:len(roles)-1]
+				continue
+			}
 		}
 
 		rolesToSet = append(rolesToSet, roles[i].RoleId)

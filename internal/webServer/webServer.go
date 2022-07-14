@@ -127,7 +127,10 @@ func newOrder(c *gin.Context) {
 		err := recover()
 		if err != nil {
 			tgbot.SendString(fmt.Sprint(err))
+			c.Writer.WriteHeader(500)
+			c.Writer.WriteString(fmt.Sprint(err))
 		}
+
 	}()
 	t1 := time.Now()
 	order := types.WebhookOrder{}
