@@ -5,10 +5,9 @@
             "name": "Launch",
             "type": "go",
             "request": "launch",
-            "remotePath": "",
             "env": {},
             "showLog": true,
-            "program": "H:/ReactProjects/thinkific-discord/main.go",
+            "program": "main.go",
             "args": []
         }
     ]

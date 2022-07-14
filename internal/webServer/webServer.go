@@ -29,6 +29,7 @@ func Listen() {
 	router.GET("/sheets/auth", sheetsAuth)
 	router.POST("/thinkific/order", newOrder)
 	router.POST("/thinkific/course", newCourse)
+	router.GET("/thinkific/updateAll", updateAll)
 	router.Static("/assets", "./internal/email/resources")
 
 	srv := &http.Server{
@@ -86,6 +87,20 @@ func Default(c *gin.Context) {
 	c.Writer.WriteHeader(204)
 }
 
+func updateAll(c *gin.Context) {
+	// defer func() {
+	// 	err := recover()
+	// 	if err != nil {
+	// 		tgbot.SendString(fmt.Sprint(err))
+	// 		c.Writer.WriteHeader(500)
+	// 		c.Writer.WriteString(fmt.Sprint(err))
+	// 	}
+
+	// }()
+
+	updateAllMembers()
+}
+
 func sendInviteLink(c *gin.Context) {
 
 	thinkificId := c.Request.URL.Query()["id"][0]
@@ -135,34 +150,7 @@ func newOrder(c *gin.Context) {
 	t1 := time.Now()
 	order := types.WebhookOrder{}
 	c.ShouldBindJSON(&order)
-	sheets.AddUser(types.User{
-		Id:        order.Payload.User.Id,
-		FirstName: order.Payload.User.First_name,
-		LastName:  order.Payload.User.Last_name,
-		Email:     order.Payload.User.Email,
-	})
-
-	roles, err := sheets.AddCourseToUser(order.Payload.User.Id, order.Payload.Course.Id, order.Payload.Expiry_date)
-	if roles == nil && err == nil {
-		c.Writer.WriteHeader(200)
-		return
-	}
-	fmt.Println(time.Now().Sub(t1))
-	if err != nil {
-		c.Writer.WriteHeader(500)
-		c.Writer.WriteString(err.Error())
-		panic(err)
-	}
-	go discordBot.SetRoles(order.Payload.User.Id, roles)
-
-	link := discord.GenerateLink(fmt.Sprintf("%v", order.Payload.User.Id))
-	err = email.SendInviteLink(order.Payload.User.Email, link, order.Payload.User.First_name)
-	if err != nil {
-		c.Writer.WriteHeader(500)
-		c.Writer.WriteString(err.Error())
-		panic(err)
-	}
-	c.Writer.WriteHeader(200)
+	handleNewOrder(order, true)
 	fmt.Println(time.Now().Sub(t1))
 }
 

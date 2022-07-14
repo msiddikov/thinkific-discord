@@ -2,6 +2,7 @@ package sheets
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"math"
@@ -11,6 +12,7 @@ import (
 	"thinkific-discord/internal/types"
 	"time"
 
+	"google.golang.org/api/googleapi"
 	"google.golang.org/api/sheets/v4"
 )
 
@@ -67,7 +69,7 @@ func UpdateRoles(roles types.RolesResp) {
 	}
 }
 
-func AddUser(user types.User) {
+func AddUser(user types.User) (isNew bool) {
 	readRange := dataRange
 	resp, err := get(spreadsheetId, readRange)
 	if err != nil {
@@ -115,6 +117,7 @@ func AddUser(user types.User) {
 	if err != nil {
 		log.Panicf("Unable to retrieve data from sheet. %v", err)
 	}
+	return !found
 }
 
 func GetDiscordIdByUserId(id int) string {
@@ -257,6 +260,23 @@ func GetCourseRole(courseId int) (string, error) {
 	return "", nil
 }
 
+func GetManagedCoursesId() ([]int, error) {
+	ids := []int{}
+	readRange := settingsBindings
+	resp, err := get(spreadsheetId, readRange)
+	if err != nil {
+		return ids, err
+	}
+	for _, row := range resp.Values {
+		if len(row) == 0 {
+			continue
+		}
+		id, _ := strconv.Atoi(row[0].(string))
+		ids = append(ids, id)
+	}
+	return ids, nil
+}
+
 func GetRoleCourses(roleId string) ([]int, error) {
 	courses := []int{}
 	readRange := settingsBindings
@@ -346,16 +366,20 @@ func update(ss, r string, vr *sheets.ValueRange) error {
 	currentRetries := 0
 
 	for {
-		res, err := svc.Spreadsheets.Values.Update(ss, r, vr).ValueInputOption("RAW").Do()
-		if res.ServerResponse.HTTPStatusCode == 429 {
-			if currentRetries == maxRetryNo {
-				return err
-			}
+		_, err := svc.Spreadsheets.Values.Update(ss, r, vr).ValueInputOption("RAW").Do()
+		if err != nil {
+			var vErr *googleapi.Error
+			errors.As(err, &vErr)
+			if vErr.Code == 429 {
+				if currentRetries == maxRetryNo {
+					return err
+				}
 
-			sleepTime := math.Max(float64(maxRetryPeriod), math.Pow(2, float64(currentRetries)))
-			time.Sleep(time.Duration(sleepTime) * time.Second)
-			currentRetries++
-			continue
+				sleepTime := math.Min(float64(maxRetryPeriod), math.Pow(2, float64(currentRetries)))
+				time.Sleep(time.Duration(sleepTime) * time.Second)
+				currentRetries++
+				continue
+			}
 		}
 
 		return err
@@ -370,15 +394,19 @@ func get(ss, r string) (*sheets.ValueRange, error) {
 
 	for {
 		res, err := svc.Spreadsheets.Values.Get(ss, r).Do()
-		if res.ServerResponse.HTTPStatusCode == 429 {
-			if currentRetries == maxRetryNo {
-				return nil, err
-			}
+		var vErr *googleapi.Error
+		if err != nil {
+			errors.As(err, &vErr)
+			if vErr.Code == 429 {
+				if currentRetries == maxRetryNo {
+					return nil, err
+				}
 
-			sleepTime := math.Max(float64(maxRetryPeriod), math.Pow(2, float64(currentRetries)))
-			time.Sleep(time.Duration(sleepTime) * time.Second)
-			currentRetries++
-			continue
+				sleepTime := math.Min(float64(maxRetryPeriod), math.Pow(2, float64(currentRetries)))
+				time.Sleep(time.Duration(sleepTime) * time.Second)
+				currentRetries++
+				continue
+			}
 		}
 
 		return res, err

@@ -49,4 +49,23 @@ type (
 			Duration string
 		}
 	}
+
+	Enrollments struct {
+		Items []struct {
+			Id          int
+			User_email  string
+			User_name   string
+			User_id     int
+			Course_name string
+			Course_id   int
+			Expiry_date time.Time
+			Expired     bool
+		}
+		Meta struct {
+			Pagination struct {
+				Current_page int
+				Total_pages  int
+			}
+		}
+	}
 )
